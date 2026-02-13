@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:noidh.github.io)",
+      "WebFetch(domain:luungoc2005.github.io)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:threlte.vercel.app)",
+      "WebFetch(domain:research.google)",
+      "WebFetch(domain:tympanus.net)",
+      "WebFetch(domain:www.alanzucconi.com)",
+      "WebFetch(domain:sbcode.net)",
+      "WebFetch(domain:cs231n.stanford.edu)",
+      "Bash(node --version)",
+      "Bash(npm --version:*)",
+      "Bash(npx --version)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(pnpm --version:*)",
+      "Bash(fnm ls-remote:*)",
+      "Bash(pnpm dlx sv create:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm run check:*)",
+      "Bash(timeout 15 pnpm run dev:*)",
+      "Bash(pnpm build:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)"
+    ]
+  }
+}
