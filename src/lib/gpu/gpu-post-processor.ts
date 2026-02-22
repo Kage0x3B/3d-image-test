@@ -144,8 +144,24 @@ export class GPUPostProcessor {
 	}
 
 	private uploadDepthTexture(depthData: Float32Array, width: number, height: number) {
-		const data = new Uint8Array(width * height * 4);
-		for (let i = 0; i < depthData.length; i++) {
+		const pixelCount = width * height;
+
+		// Reuse existing texture if dimensions match
+		if (this.depthTexture && this.depthTexture.image.width === width && this.depthTexture.image.height === height) {
+			const data = this.depthTexture.image.data as Uint8Array;
+			for (let i = 0; i < pixelCount; i++) {
+				const v = Math.round(Math.max(0, Math.min(1, depthData[i])) * 255);
+				data[i * 4] = v;
+				data[i * 4 + 1] = v;
+				data[i * 4 + 2] = v;
+				data[i * 4 + 3] = 255;
+			}
+			this.depthTexture.needsUpdate = true;
+			return;
+		}
+
+		const data = new Uint8Array(pixelCount * 4);
+		for (let i = 0; i < pixelCount; i++) {
 			const v = Math.round(Math.max(0, Math.min(1, depthData[i])) * 255);
 			data[i * 4] = v;
 			data[i * 4 + 1] = v;
@@ -181,7 +197,8 @@ export class GPUPostProcessor {
 		const canvas = document.createElement('canvas');
 		canvas.width = width;
 		canvas.height = height;
-		const ctx = canvas.getContext('2d')!;
+		const ctx = canvas.getContext('2d');
+		if (!ctx) throw new Error('Failed to get 2d context for depth readback');
 		const imgData = ctx.createImageData(width, height);
 
 		// readRenderTargetPixels returns rows bottom-to-top (OpenGL convention).
@@ -211,4 +228,11 @@ export function getGPUPostProcessor(): GPUPostProcessor {
 		singleton = new GPUPostProcessor();
 	}
 	return singleton;
+}
+
+export function disposeGPUPostProcessor(): void {
+	if (singleton) {
+		singleton.dispose();
+		singleton = null;
+	}
 }

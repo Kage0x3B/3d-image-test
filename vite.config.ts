@@ -11,7 +11,7 @@ export default defineConfig({
 		format: 'es'
 	},
 	optimizeDeps: {
-		exclude: ['@huggingface/transformers']
+		exclude: ['@huggingface/transformers', 'onnxruntime-web']
 	},
 	server: {
 		host:true

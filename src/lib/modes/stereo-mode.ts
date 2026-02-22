@@ -17,8 +17,8 @@ export class StereoMode implements ViewingMode {
 
 	activate(ctx: SceneContext, config: ViewingModeConfig): void {
 		this.ctx = ctx;
-		this.crossEye = (config.stereoCrossEye as boolean) ?? false;
-		this.eyeSeparation = (config.stereoEyeSeparation as number) ?? 0.06;
+		this.crossEye = config.stereoCrossEye ?? false;
+		this.eyeSeparation = config.stereoEyeSeparation ?? 0.06;
 
 		ctx.renderer.xr.enabled = false;
 		ctx.mesh.position.set(0, 0, 0);

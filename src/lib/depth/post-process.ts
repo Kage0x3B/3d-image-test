@@ -97,7 +97,8 @@ export function extractDepthFromCanvas(canvas: HTMLCanvasElement): {
 } {
 	const width = canvas.width;
 	const height = canvas.height;
-	const ctx = canvas.getContext('2d')!;
+	const ctx = canvas.getContext('2d');
+	if (!ctx) throw new Error('Failed to get 2d context from depth canvas');
 	const imgData = ctx.getImageData(0, 0, width, height);
 	const depthData = new Float32Array(width * height);
 	for (let i = 0; i < depthData.length; i++) {
@@ -117,7 +118,8 @@ export function depthDataToCanvas(
 	const canvas = document.createElement('canvas');
 	canvas.width = width;
 	canvas.height = height;
-	const ctx = canvas.getContext('2d')!;
+	const ctx = canvas.getContext('2d');
+	if (!ctx) throw new Error('Failed to get 2d context for depth canvas');
 	const imgData = ctx.createImageData(width, height);
 	for (let i = 0; i < depthData.length; i++) {
 		const v = Math.round(Math.max(0, Math.min(1, depthData[i])) * 255);

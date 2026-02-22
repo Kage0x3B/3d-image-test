@@ -2,6 +2,7 @@
 	import { appState, resetState, type ViewingModeId } from '$lib/stores/app-state.svelte';
 	import { listModes } from '$lib/modes';
 	import { getGPUPostProcessor } from '$lib/gpu/gpu-post-processor';
+	import type { RenderingMethod, InpaintingMethod } from '$lib/inpainting/types';
 
 	let modes = listModes().filter((m) => m.id !== 'webxr' || appState.hasWebXR);
 
@@ -9,12 +10,14 @@
 		onModeChange?: (modeId: ViewingModeId) => void;
 		onConfigChange?: (key: string, value: unknown) => void;
 		onDepthUpdate?: (canvas: HTMLCanvasElement) => void;
+		onMeshRebuild?: () => void;
 	}
-	let { onModeChange, onConfigChange, onDepthUpdate }: Props = $props();
+	let { onModeChange, onConfigChange, onDepthUpdate, onMeshRebuild }: Props = $props();
 
 	let showDepthSettings = $state(false);
 	let showModeSettings = $state(true);
 	let showRenderSettings = $state(false);
+	let showMeshSettings = $state(false);
 
 	function selectMode(id: string) {
 		appState.activeMode = id as ViewingModeId;
@@ -48,6 +51,32 @@
 		const value = parseFloat((e.target as HTMLInputElement).value);
 		appState.displacementScale = value;
 		onConfigChange?.('displacementScale', value);
+	}
+
+	// --- Mesh & Inpainting settings ---
+
+	function updateRenderingMethod(e: Event) {
+		const value = (e.target as HTMLSelectElement).value as RenderingMethod;
+		appState.renderingMethod = value;
+		onMeshRebuild?.();
+	}
+
+	function updateInpaintingMethod(e: Event) {
+		const value = (e.target as HTMLSelectElement).value as InpaintingMethod;
+		appState.inpaintingMethod = value;
+		onMeshRebuild?.();
+	}
+
+	function updateEdgeThreshold(e: Event) {
+		const value = parseFloat((e.target as HTMLInputElement).value);
+		appState.edgeThreshold = value;
+		onMeshRebuild?.();
+	}
+
+	function updateInpaintStripWidth(e: Event) {
+		const value = parseInt((e.target as HTMLInputElement).value);
+		appState.inpaintStripWidth = value;
+		onMeshRebuild?.();
 	}
 
 	// --- Parallax settings ---
@@ -103,9 +132,11 @@
 
 <div class="p-4 bg-[#1e1e2e] rounded-xl border border-[#313244] max-h-[calc(100vh-2rem)] overflow-y-auto space-y-3 text-sm">
 	<!-- Mode tabs -->
-	<div class="flex gap-1.5">
+	<div class="flex gap-1.5" role="tablist" aria-label="Viewing mode">
 		{#each modes as mode}
 			<button
+				role="tab"
+				aria-selected={appState.activeMode === mode.id}
 				class="flex-1 px-3 py-2 rounded-lg text-sm transition-all cursor-pointer border {appState.activeMode === mode.id
 					? 'bg-blue-400 text-[#1e1e2e] border-blue-400 font-semibold'
 					: 'bg-transparent text-[#a6adc8] border-[#313244] hover:border-blue-400 hover:text-[#cdd6f4]'}"
@@ -121,12 +152,14 @@
 		<button
 			class="flex items-center justify-between w-full text-[#cdd6f4] font-medium py-1 cursor-pointer"
 			onclick={() => (showRenderSettings = !showRenderSettings)}
+			aria-expanded={showRenderSettings}
+			aria-controls="render-settings"
 		>
 			<span>Rendering</span>
 			<span class="text-[#6c7086] text-xs">{showRenderSettings ? '▾' : '▸'}</span>
 		</button>
 		{#if showRenderSettings}
-			<div class="flex flex-col gap-2.5 pt-1">
+			<div id="render-settings" class="flex flex-col gap-2.5 pt-1">
 				<label class="flex items-center gap-3 text-[#cdd6f4]">
 					<span class="min-w-24 text-xs">Depth Intensity</span>
 					<input type="range" min="0" max="1" step="0.01" value={appState.displacementScale}
@@ -137,17 +170,82 @@
 		{/if}
 	</div>
 
+	<!-- Mesh & Inpainting Settings -->
+	<div>
+		<button
+			class="flex items-center justify-between w-full text-[#cdd6f4] font-medium py-1 cursor-pointer"
+			onclick={() => (showMeshSettings = !showMeshSettings)}
+			aria-expanded={showMeshSettings}
+			aria-controls="mesh-settings"
+		>
+			<span>Mesh & Inpainting</span>
+			<span class="text-[#6c7086] text-xs">{showMeshSettings ? '▾' : '▸'}</span>
+		</button>
+		{#if showMeshSettings}
+			<div id="mesh-settings" class="flex flex-col gap-2.5 pt-1">
+				<label class="flex flex-col gap-1 text-[#cdd6f4]">
+					<span class="text-xs">Rendering Method</span>
+					<select
+						class="w-full px-2 py-1.5 rounded-lg bg-[#11111b] border border-[#313244] text-[#cdd6f4] text-xs focus:outline-none focus:border-blue-400 cursor-pointer"
+						value={appState.renderingMethod}
+						onchange={updateRenderingMethod}
+					>
+						<option value="simple">Simple (Displacement Map)</option>
+						<option value="torn-mesh">Torn Mesh</option>
+					</select>
+				</label>
+
+				{#if appState.renderingMethod === 'torn-mesh'}
+					<label class="flex flex-col gap-1 text-[#cdd6f4]">
+						<span class="text-xs">Inpainting Method</span>
+						<select
+							class="w-full px-2 py-1.5 rounded-lg bg-[#11111b] border border-[#313244] text-[#cdd6f4] text-xs focus:outline-none focus:border-blue-400 cursor-pointer"
+							value={appState.inpaintingMethod}
+							onchange={updateInpaintingMethod}
+						>
+							<option value="none">None</option>
+							<option value="telea">Telea (Fast)</option>
+							<option value="migan">MI-GAN (Neural){appState.miganModelLoaded ? '' : ' - Downloads ~28MB'}</option>
+						</select>
+					</label>
+
+					<label class="flex items-center gap-3 text-[#cdd6f4]">
+						<span class="min-w-24 text-xs">Edge Threshold</span>
+						<input type="range" min="0.05" max="0.5" step="0.01" value={appState.edgeThreshold}
+							oninput={updateEdgeThreshold} class="flex-1 accent-blue-400" />
+						<span class="min-w-9 text-right font-mono text-xs text-[#6c7086]">{appState.edgeThreshold.toFixed(2)}</span>
+					</label>
+
+					{#if appState.inpaintingMethod !== 'none'}
+						<label class="flex items-center gap-3 text-[#cdd6f4]">
+							<span class="min-w-24 text-xs">Inpaint Width</span>
+							<input type="range" min="5" max="60" step="1" value={appState.inpaintStripWidth}
+								oninput={updateInpaintStripWidth} class="flex-1 accent-blue-400" />
+							<span class="min-w-9 text-right font-mono text-xs text-[#6c7086]">{appState.inpaintStripWidth}px</span>
+						</label>
+					{/if}
+
+					{#if appState.isInpainting}
+						<div class="text-xs text-blue-400 animate-pulse">Inpainting...</div>
+					{/if}
+				{/if}
+			</div>
+		{/if}
+	</div>
+
 	<!-- Mode-Specific Settings -->
 	<div>
 		<button
 			class="flex items-center justify-between w-full text-[#cdd6f4] font-medium py-1 cursor-pointer"
 			onclick={() => (showModeSettings = !showModeSettings)}
+			aria-expanded={showModeSettings}
+			aria-controls="mode-settings"
 		>
 			<span>Mode Settings</span>
 			<span class="text-[#6c7086] text-xs">{showModeSettings ? '▾' : '▸'}</span>
 		</button>
 		{#if showModeSettings}
-			<div class="flex flex-col gap-2.5 pt-1">
+			<div id="mode-settings" class="flex flex-col gap-2.5 pt-1">
 				{#if appState.activeMode === 'parallax'}
 					<label class="flex items-center gap-3 text-[#cdd6f4]">
 						<span class="min-w-24 text-xs">Movement Range</span>
@@ -205,12 +303,14 @@
 		<button
 			class="flex items-center justify-between w-full text-[#cdd6f4] font-medium py-1 cursor-pointer"
 			onclick={() => (showDepthSettings = !showDepthSettings)}
+			aria-expanded={showDepthSettings}
+			aria-controls="depth-settings"
 		>
 			<span>Depth Processing</span>
 			<span class="text-[#6c7086] text-xs">{showDepthSettings ? '▾' : '▸'}</span>
 		</button>
 		{#if showDepthSettings}
-			<div class="flex flex-col gap-2.5 pt-1">
+			<div id="depth-settings" class="flex flex-col gap-2.5 pt-1">
 				<label class="flex items-center gap-2 text-[#cdd6f4] text-xs cursor-pointer">
 					<input type="checkbox" checked={appState.postProcess.invert}
 						onchange={() => updatePostProcess('invert', !appState.postProcess.invert)} class="accent-blue-400" />

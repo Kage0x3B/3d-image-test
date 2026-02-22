@@ -16,8 +16,8 @@ export function buildDisplacedMesh(config: MeshConfig): {
 	const planeWidth = aspect >= 1 ? 2 : 2 * aspect;
 	const planeHeight = aspect >= 1 ? 2 / aspect : 2;
 
-	const subsX = subdivisions;
-	const subsY = Math.round(subdivisions / aspect);
+	const subsX = Math.max(1, subdivisions);
+	const subsY = Math.max(1, Math.round(subdivisions / aspect));
 
 	const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight, subsX, subsY);
 

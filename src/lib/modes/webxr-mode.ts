@@ -16,7 +16,7 @@ export class WebXRMode implements ViewingMode {
 
 	activate(ctx: SceneContext, config: ViewingModeConfig): void {
 		this.ctx = ctx;
-		const viewDist = (config.webxrViewingDistance as number) ?? 1.8;
+		const viewDist = config.webxrViewingDistance ?? 1.8;
 
 		// Save original mesh position
 		this.originalMeshPosition.x = ctx.mesh.position.x;

@@ -1,8 +1,23 @@
 import type { SceneContext } from '../renderer/types';
 
-export interface ViewingModeConfig {
+export interface ParallaxConfig {
+	parallaxMaxOffset: number;
+	parallaxSmoothing: number;
+	parallaxAutoWiggle: boolean;
+	parallaxAutoWiggleSpeed: number;
+}
+
+export interface StereoConfig {
+	stereoCrossEye: boolean;
+	stereoEyeSeparation: number;
+}
+
+export interface WebXRConfig {
+	webxrViewingDistance: number;
+}
+
+export interface ViewingModeConfig extends ParallaxConfig, StereoConfig, WebXRConfig {
 	displacementScale: number;
-	[key: string]: unknown;
 }
 
 export interface ViewingMode {

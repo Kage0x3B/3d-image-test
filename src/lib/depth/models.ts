@@ -7,6 +7,8 @@ export interface DepthModel {
 	group: string;
 	/** Approximate download size (FP32 ONNX) */
 	size: string;
+	/** Approximate native depth output resolution (shortest side, in pixels) */
+	depthRes: number;
 }
 
 export const DEFAULT_MODEL_ID = 'onnx-community/depth-anything-v2-small';
@@ -17,19 +19,22 @@ export const DEPTH_MODELS: DepthModel[] = [
 		id: 'onnx-community/depth-anything-v2-small',
 		label: 'Small (~100 MB)',
 		group: 'Depth Anything V2',
-		size: '~100 MB'
+		size: '~100 MB',
+		depthRes: 518
 	},
 	{
 		id: 'onnx-community/depth-anything-v2-base',
 		label: 'Base (~390 MB)',
 		group: 'Depth Anything V2',
-		size: '~390 MB'
+		size: '~390 MB',
+		depthRes: 518
 	},
 	{
 		id: 'onnx-community/depth-anything-v2-large',
 		label: 'Large (~1.3 GB)',
 		group: 'Depth Anything V2',
-		size: '~1.3 GB'
+		size: '~1.3 GB',
+		depthRes: 518
 	},
 
 	// --- Depth Anything V1 ---
@@ -37,19 +42,22 @@ export const DEPTH_MODELS: DepthModel[] = [
 		id: 'Xenova/depth-anything-small-hf',
 		label: 'Small (~100 MB)',
 		group: 'Depth Anything V1',
-		size: '~100 MB'
+		size: '~100 MB',
+		depthRes: 518
 	},
 	{
 		id: 'Xenova/depth-anything-base-hf',
 		label: 'Base (~390 MB)',
 		group: 'Depth Anything V1',
-		size: '~390 MB'
+		size: '~390 MB',
+		depthRes: 518
 	},
 	{
 		id: 'Xenova/depth-anything-large-hf',
 		label: 'Large (~1.3 GB)',
 		group: 'Depth Anything V1',
-		size: '~1.3 GB'
+		size: '~1.3 GB',
+		depthRes: 518
 	},
 
 	// --- DPT-DINOv2 ---
@@ -57,37 +65,43 @@ export const DEPTH_MODELS: DepthModel[] = [
 		id: 'onnx-community/dpt-dinov2-small-nyu',
 		label: 'Small — Indoor (~144 MB)',
 		group: 'DPT-DINOv2',
-		size: '~144 MB'
+		size: '~144 MB',
+		depthRes: 518
 	},
 	{
 		id: 'onnx-community/dpt-dinov2-small-kitti',
 		label: 'Small — Outdoor (~144 MB)',
 		group: 'DPT-DINOv2',
-		size: '~144 MB'
+		size: '~144 MB',
+		depthRes: 518
 	},
 	{
 		id: 'onnx-community/dpt-dinov2-base-nyu',
 		label: 'Base — Indoor (~444 MB)',
 		group: 'DPT-DINOv2',
-		size: '~444 MB'
+		size: '~444 MB',
+		depthRes: 518
 	},
 	{
 		id: 'onnx-community/dpt-dinov2-base-kitti',
 		label: 'Base — Outdoor (~444 MB)',
 		group: 'DPT-DINOv2',
-		size: '~444 MB'
+		size: '~444 MB',
+		depthRes: 518
 	},
 	{
 		id: 'onnx-community/dpt-dinov2-large-nyu',
 		label: 'Large — Indoor (~1.3 GB)',
 		group: 'DPT-DINOv2',
-		size: '~1.3 GB'
+		size: '~1.3 GB',
+		depthRes: 518
 	},
 	{
 		id: 'onnx-community/dpt-dinov2-large-kitti',
 		label: 'Large — Outdoor (~1.3 GB)',
 		group: 'DPT-DINOv2',
-		size: '~1.3 GB'
+		size: '~1.3 GB',
+		depthRes: 518
 	},
 
 	// --- Classic DPT ---
@@ -95,13 +109,15 @@ export const DEPTH_MODELS: DepthModel[] = [
 		id: 'Xenova/dpt-hybrid-midas',
 		label: 'Hybrid MiDaS (~533 MB)',
 		group: 'Classic DPT',
-		size: '~533 MB'
+		size: '~533 MB',
+		depthRes: 384
 	},
 	{
 		id: 'Xenova/dpt-large',
 		label: 'Large (~1.4 GB)',
 		group: 'Classic DPT',
-		size: '~1.4 GB'
+		size: '~1.4 GB',
+		depthRes: 384
 	},
 
 	// --- GLPN ---
@@ -109,13 +125,15 @@ export const DEPTH_MODELS: DepthModel[] = [
 		id: 'Xenova/glpn-nyu',
 		label: 'Indoor / NYU (~246 MB)',
 		group: 'GLPN',
-		size: '~246 MB'
+		size: '~246 MB',
+		depthRes: 480
 	},
 	{
 		id: 'Xenova/glpn-kitti',
 		label: 'Outdoor / KITTI (~246 MB)',
 		group: 'GLPN',
-		size: '~246 MB'
+		size: '~246 MB',
+		depthRes: 480
 	},
 
 	// --- Metric3D ---
@@ -123,7 +141,8 @@ export const DEPTH_MODELS: DepthModel[] = [
 		id: 'onnx-community/metric3d-vit-small',
 		label: 'ViT Small (~151 MB)',
 		group: 'Metric3D',
-		size: '~151 MB'
+		size: '~151 MB',
+		depthRes: 518
 	}
 ];
 

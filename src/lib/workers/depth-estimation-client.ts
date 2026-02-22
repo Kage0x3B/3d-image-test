@@ -6,6 +6,14 @@ export type ProgressCallback = (event: {
 	message: string;
 }) => void;
 
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+	let timeoutId: ReturnType<typeof setTimeout>;
+	const timeout = new Promise<never>((_, reject) => {
+		timeoutId = setTimeout(() => reject(new Error(message)), ms);
+	});
+	return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 export class DepthEstimationClient {
 	private worker: Worker;
 	private _isReady = false;
@@ -23,13 +31,30 @@ export class DepthEstimationClient {
 	private currentModelId: string | null = null;
 
 	constructor() {
-		this.worker = new Worker(
+		this.worker = this.createWorker();
+	}
+
+	private createWorker(): Worker {
+		const worker = new Worker(
 			new URL('./depth-estimation.worker.ts', import.meta.url),
 			{ type: 'module' }
 		);
-		this.worker.onmessage = (e: MessageEvent<DepthEstimationOutgoing>) => {
+		worker.onmessage = (e: MessageEvent<DepthEstimationOutgoing>) => {
 			this.handleMessage(e.data);
 		};
+		worker.onerror = (e) => {
+			const error = new Error(`Worker crashed: ${e.message || 'unknown error'}`);
+			this._isReady = false;
+			this.initPromise?.reject(error);
+			this.initPromise = null;
+			if (this.estimatePromise) {
+				this.estimatePromise.reject(error);
+				this.estimatePromise = null;
+			}
+			// Reset singleton so next call creates a fresh worker
+			singleton = null;
+		};
+		return worker;
 	}
 
 	get isReady() {
@@ -42,23 +67,18 @@ export class DepthEstimationClient {
 		// Model changed — recreate worker
 		if (this._isReady) {
 			this.worker.terminate();
-			this.worker = new Worker(
-				new URL('./depth-estimation.worker.ts', import.meta.url),
-				{ type: 'module' }
-			);
-			this.worker.onmessage = (e: MessageEvent<DepthEstimationOutgoing>) => {
-				this.handleMessage(e.data);
-			};
+			this.worker = this.createWorker();
 			this._isReady = false;
 		}
 
 		this.currentModelId = modelId;
 		this.onProgress = onProgress ?? null;
 
-		return new Promise((resolve, reject) => {
+		const promise = new Promise<void>((resolve, reject) => {
 			this.initPromise = { resolve, reject };
 			this.send({ type: 'initialize', modelId });
 		});
+		return withTimeout(promise, 120_000, 'Model loading timed out after 2 minutes');
 	}
 
 	async estimate(
@@ -75,14 +95,15 @@ export class DepthEstimationClient {
 		const height = image instanceof HTMLImageElement ? image.naturalHeight : image.height;
 		canvas.width = width;
 		canvas.height = height;
-		const ctx = canvas.getContext('2d')!;
+		const ctx = canvas.getContext('2d');
+		if (!ctx) throw new Error('Failed to get 2d context for image extraction');
 		ctx.drawImage(image, 0, 0);
 		const imageData = ctx.getImageData(0, 0, width, height);
 
 		const taskId = this.nextTaskId++;
 		const pixelData = imageData.data;
 
-		return new Promise((resolve, reject) => {
+		const promise = new Promise<{ depthData: Float32Array; width: number; height: number }>((resolve, reject) => {
 			this.estimatePromise = { taskId, resolve, reject };
 
 			const msg: DepthEstimationIncoming = {
@@ -94,6 +115,7 @@ export class DepthEstimationClient {
 			};
 			this.worker.postMessage(msg, [pixelData.buffer]);
 		});
+		return withTimeout(promise, 60_000, 'Depth estimation timed out after 60 seconds');
 	}
 
 	dispose() {

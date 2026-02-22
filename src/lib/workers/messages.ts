@@ -1,3 +1,59 @@
+// --- Inpainting worker messages ---
+
+export type InpaintingIncoming =
+	| InpaintingRunTelea
+	| InpaintingLoadMigan
+	| InpaintingRunMigan;
+
+export interface InpaintingRunTelea {
+	type: 'run-telea';
+	imageData: Uint8ClampedArray;
+	mask: Uint8Array;
+	width: number;
+	height: number;
+	radius: number;
+}
+
+export interface InpaintingLoadMigan {
+	type: 'load-migan';
+}
+
+export interface InpaintingRunMigan {
+	type: 'run-migan';
+	imageData: Uint8ClampedArray;
+	mask: Uint8Array;
+	width: number;
+	height: number;
+}
+
+export type InpaintingOutgoing =
+	| InpaintingResultMsg
+	| InpaintingProgress
+	| InpaintingError
+	| InpaintingMiganReady;
+
+export interface InpaintingResultMsg {
+	type: 'result';
+	imageData: Uint8ClampedArray;
+	width: number;
+	height: number;
+}
+
+export interface InpaintingProgress {
+	type: 'progress';
+	progress: number;
+	message: string;
+}
+
+export interface InpaintingError {
+	type: 'error';
+	message: string;
+}
+
+export interface InpaintingMiganReady {
+	type: 'migan-ready';
+}
+
 // --- Depth estimation worker messages ---
 
 export type DepthEstimationIncoming = DepthEstimationInitialize | DepthEstimationEstimate;
