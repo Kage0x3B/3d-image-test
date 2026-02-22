@@ -51,8 +51,9 @@ export const appState = $state({
 	// Viewing — parallax mode
 	parallaxMaxOffset: 0.08,
 	parallaxSmoothing: 0.08,
-	parallaxAutoWiggle: false,
-	parallaxAutoWiggleSpeed: 0.8,
+	parallaxAutoAnimate: false,
+	parallaxAnimationSpeed: 0.8,
+	parallaxAnimationType: 'wiggle' as import('$lib/modes/types').AnimationPreset,
 
 	// Viewing — stereo mode
 	stereoCrossEye: false,

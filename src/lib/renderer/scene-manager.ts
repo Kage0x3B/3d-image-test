@@ -16,7 +16,7 @@ export function createSceneContext(config: RendererConfig): SceneContext {
 	const imageWidth = photo instanceof HTMLImageElement ? photo.naturalWidth : photo.width;
 	const imageHeight = photo instanceof HTMLImageElement ? photo.naturalHeight : photo.height;
 
-	const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+	const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true });
 	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 	renderer.setSize(container.clientWidth, container.clientHeight);
 	renderer.outputColorSpace = THREE.SRGBColorSpace;

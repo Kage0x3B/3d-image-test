@@ -1,10 +1,13 @@
 import type { SceneContext } from '../renderer/types';
 
+export type AnimationPreset = 'wiggle' | 'orbit' | 'ken-burns' | 'dolly-zoom' | 'random-drift';
+
 export interface ParallaxConfig {
 	parallaxMaxOffset: number;
 	parallaxSmoothing: number;
-	parallaxAutoWiggle: boolean;
-	parallaxAutoWiggleSpeed: number;
+	parallaxAutoAnimate: boolean;
+	parallaxAnimationSpeed: number;
+	parallaxAnimationType: AnimationPreset;
 }
 
 export interface StereoConfig {

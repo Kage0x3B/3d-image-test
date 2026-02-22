@@ -19,11 +19,18 @@
 
 	const modelGroups = getModelGroups();
 
+	import type { VideoExportHandle } from '$lib/export/video-exporter';
+
 	let viewerShell = $state<ViewerShell>();
 	let showControls = $state(true);
 	let hideTimeout: ReturnType<typeof setTimeout> | null = null;
 	let isMobile = $state(false);
 	let meshRebuildTimeout: ReturnType<typeof setTimeout> | null = null;
+
+	// Recording state
+	let isRecording = $state(false);
+	let recordingProgress = $state(0);
+	let videoHandle: VideoExportHandle | null = null;
 
 	onMount(() => {
 		isMobile = window.matchMedia('(max-width: 768px)').matches;
@@ -333,6 +340,29 @@
 		}
 	}
 
+	function handleRecordVideo(durationMs: number) {
+		if (isRecording || !viewerShell) return;
+		isRecording = true;
+		recordingProgress = 0;
+		videoHandle = viewerShell.recordVideo(durationMs, {
+			onProgress: (p) => { recordingProgress = p; },
+			onComplete: () => {},
+			onStop: () => {
+				isRecording = false;
+				recordingProgress = 0;
+				videoHandle = null;
+			}
+		});
+	}
+
+	function handleStopRecording() {
+		videoHandle?.stop();
+	}
+
+	function handleExportGLTF() {
+		viewerShell?.handleExportGLTF();
+	}
+
 	function handleMouseMoveDesktop(e: MouseEvent) {
 		if (isMobile) return;
 		const threshold = 350;
@@ -429,6 +459,23 @@
 		<!-- Full-screen viewer -->
 		<ViewerShell bind:this={viewerShell} />
 
+		<!-- Recording indicator -->
+		{#if isRecording}
+			<div class="fixed top-4 left-4 z-20 flex items-center gap-2">
+				<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-600/90 text-white text-sm font-semibold shadow-lg">
+					<span class="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></span>
+					<span>REC</span>
+					<span class="font-mono text-xs opacity-80">{Math.round(recordingProgress * 100)}%</span>
+				</div>
+				<button
+					class="px-3 py-1.5 rounded-lg bg-[#1e1e2e]/90 border border-[#313244] text-[#cdd6f4] text-xs cursor-pointer hover:border-red-400 hover:text-red-400 transition-all"
+					onclick={handleStopRecording}
+				>
+					Stop
+				</button>
+			</div>
+		{/if}
+
 		<!-- Depth map preview overlay -->
 		{#if appState.showDepthPreview && appState.depthCanvas}
 			<div class="fixed bottom-4 left-4 z-10 rounded-lg overflow-hidden border border-[#313244] shadow-xl">
@@ -446,7 +493,7 @@
 		<div
 			class="hidden md:block fixed top-4 right-4 w-80 transition-all duration-300 z-10 {showControls ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}"
 		>
-			<ControlPanel onModeChange={handleModeChange} onConfigChange={handleConfigChange} onDepthUpdate={handleDepthUpdate} onMeshRebuild={handleMeshRebuild} />
+			<ControlPanel onModeChange={handleModeChange} onConfigChange={handleConfigChange} onDepthUpdate={handleDepthUpdate} onMeshRebuild={handleMeshRebuild} onRecordVideo={handleRecordVideo} onExportGLTF={handleExportGLTF} {isRecording} {recordingProgress} />
 		</div>
 
 		<!-- Desktop: fullscreen button -->
@@ -499,7 +546,7 @@
 			>
 				<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
 				<div class="absolute bottom-0 left-0 right-0 p-4 animate-slide-up" onclick={(e) => e.stopPropagation()}>
-					<ControlPanel onModeChange={handleModeChange} onConfigChange={handleConfigChange} onDepthUpdate={handleDepthUpdate} onMeshRebuild={handleMeshRebuild} />
+					<ControlPanel onModeChange={handleModeChange} onConfigChange={handleConfigChange} onDepthUpdate={handleDepthUpdate} onMeshRebuild={handleMeshRebuild} onRecordVideo={handleRecordVideo} onExportGLTF={handleExportGLTF} {isRecording} {recordingProgress} />
 				</div>
 			</div>
 		{/if}

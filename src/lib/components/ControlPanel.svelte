@@ -3,6 +3,7 @@
 	import { listModes } from '$lib/modes';
 	import { getGPUPostProcessor } from '$lib/gpu/gpu-post-processor';
 	import type { RenderingMethod, InpaintingMethod } from '$lib/inpainting/types';
+	import type { AnimationPreset } from '$lib/modes/types';
 
 	let modes = listModes().filter((m) => m.id !== 'webxr' || appState.hasWebXR);
 
@@ -11,13 +12,19 @@
 		onConfigChange?: (key: string, value: unknown) => void;
 		onDepthUpdate?: (canvas: HTMLCanvasElement) => void;
 		onMeshRebuild?: () => void;
+		onRecordVideo?: (durationMs: number) => void;
+		onExportGLTF?: () => void;
+		isRecording?: boolean;
+		recordingProgress?: number;
 	}
-	let { onModeChange, onConfigChange, onDepthUpdate, onMeshRebuild }: Props = $props();
+	let { onModeChange, onConfigChange, onDepthUpdate, onMeshRebuild, onRecordVideo, onExportGLTF, isRecording = false, recordingProgress = 0 }: Props = $props();
 
 	let showDepthSettings = $state(false);
 	let showModeSettings = $state(true);
 	let showRenderSettings = $state(false);
 	let showMeshSettings = $state(false);
+	let showExportSettings = $state(false);
+	let videoDuration = $state(5000);
 
 	function selectMode(id: string) {
 		appState.activeMode = id as ViewingModeId;
@@ -93,15 +100,21 @@
 		onConfigChange?.('smoothing', v);
 	}
 
-	function toggleAutoWiggle() {
-		appState.parallaxAutoWiggle = !appState.parallaxAutoWiggle;
-		onConfigChange?.('autoWiggle', appState.parallaxAutoWiggle);
+	function toggleAutoAnimate() {
+		appState.parallaxAutoAnimate = !appState.parallaxAutoAnimate;
+		onConfigChange?.('autoAnimate', appState.parallaxAutoAnimate);
 	}
 
-	function updateAutoWiggleSpeed(e: Event) {
+	function updateAnimationType(e: Event) {
+		const v = (e.target as HTMLSelectElement).value as AnimationPreset;
+		appState.parallaxAnimationType = v;
+		onConfigChange?.('animationType', v);
+	}
+
+	function updateAnimationSpeed(e: Event) {
 		const v = parseFloat((e.target as HTMLInputElement).value);
-		appState.parallaxAutoWiggleSpeed = v;
-		onConfigChange?.('autoWiggleSpeed', v);
+		appState.parallaxAnimationSpeed = v;
+		onConfigChange?.('animationSpeed', v);
 	}
 
 	// --- Stereo settings ---
@@ -260,15 +273,29 @@
 						<span class="min-w-9 text-right font-mono text-xs text-[#6c7086]">{appState.parallaxSmoothing.toFixed(3)}</span>
 					</label>
 					<label class="flex items-center gap-2 text-[#cdd6f4] text-xs cursor-pointer">
-						<input type="checkbox" checked={appState.parallaxAutoWiggle} onchange={toggleAutoWiggle} class="accent-blue-400" />
-						<span>Auto wiggle</span>
+						<input type="checkbox" checked={appState.parallaxAutoAnimate} onchange={toggleAutoAnimate} class="accent-blue-400" />
+						<span>Auto animate</span>
 					</label>
-					{#if appState.parallaxAutoWiggle}
+					{#if appState.parallaxAutoAnimate}
+						<label class="flex flex-col gap-1 text-[#cdd6f4]">
+							<span class="text-xs">Animation</span>
+							<select
+								class="w-full px-2 py-1.5 rounded-lg bg-[#11111b] border border-[#313244] text-[#cdd6f4] text-xs focus:outline-none focus:border-blue-400 cursor-pointer"
+								value={appState.parallaxAnimationType}
+								onchange={updateAnimationType}
+							>
+								<option value="wiggle">Wiggle</option>
+								<option value="orbit">Orbit</option>
+								<option value="ken-burns">Ken Burns</option>
+								<option value="dolly-zoom">Dolly Zoom</option>
+								<option value="random-drift">Random Drift</option>
+							</select>
+						</label>
 						<label class="flex items-center gap-3 text-[#cdd6f4]">
-							<span class="min-w-24 text-xs">Wiggle Speed</span>
-							<input type="range" min="0.1" max="3" step="0.1" value={appState.parallaxAutoWiggleSpeed}
-								oninput={updateAutoWiggleSpeed} class="flex-1 accent-blue-400" />
-							<span class="min-w-9 text-right font-mono text-xs text-[#6c7086]">{appState.parallaxAutoWiggleSpeed.toFixed(1)}</span>
+							<span class="min-w-24 text-xs">Speed</span>
+							<input type="range" min="0.1" max="3" step="0.1" value={appState.parallaxAnimationSpeed}
+								oninput={updateAnimationSpeed} class="flex-1 accent-blue-400" />
+							<span class="min-w-9 text-right font-mono text-xs text-[#6c7086]">{appState.parallaxAnimationSpeed.toFixed(1)}</span>
 						</label>
 					{/if}
 				{/if}
@@ -371,6 +398,53 @@
 					onclick={toggleDepthPreview}
 				>
 					{appState.showDepthPreview ? 'Hide' : 'Show'} depth map preview
+				</button>
+			</div>
+		{/if}
+	</div>
+
+	<!-- Export -->
+	<div>
+		<button
+			class="flex items-center justify-between w-full text-[#cdd6f4] font-medium py-1 cursor-pointer"
+			onclick={() => (showExportSettings = !showExportSettings)}
+			aria-expanded={showExportSettings}
+			aria-controls="export-settings"
+		>
+			<span>Export</span>
+			<span class="text-[#6c7086] text-xs">{showExportSettings ? '▾' : '▸'}</span>
+		</button>
+		{#if showExportSettings}
+			<div id="export-settings" class="flex flex-col gap-2.5 pt-1">
+				<label class="flex flex-col gap-1 text-[#cdd6f4]">
+					<span class="text-xs">Video Duration</span>
+					<select
+						class="w-full px-2 py-1.5 rounded-lg bg-[#11111b] border border-[#313244] text-[#cdd6f4] text-xs focus:outline-none focus:border-blue-400 cursor-pointer"
+						bind:value={videoDuration}
+					>
+						<option value={3000}>3 seconds</option>
+						<option value={5000}>5 seconds</option>
+						<option value={10000}>10 seconds</option>
+					</select>
+				</label>
+				<button
+					class="w-full py-2 rounded-lg text-xs border border-[#313244] cursor-pointer transition-all {isRecording
+						? 'bg-red-500/20 border-red-400 text-red-400'
+						: 'bg-transparent text-[#cdd6f4] hover:border-blue-400 hover:text-blue-400'}"
+					onclick={() => onRecordVideo?.(videoDuration)}
+					disabled={isRecording}
+				>
+					{#if isRecording}
+						Recording... {Math.round(recordingProgress * 100)}%
+					{:else}
+						Record Video
+					{/if}
+				</button>
+				<button
+					class="w-full py-2 rounded-lg text-xs border border-[#313244] bg-transparent text-[#cdd6f4] cursor-pointer transition-all hover:border-blue-400 hover:text-blue-400"
+					onclick={() => onExportGLTF?.()}
+				>
+					Export 3D Model (.glb)
 				</button>
 			</div>
 		{/if}

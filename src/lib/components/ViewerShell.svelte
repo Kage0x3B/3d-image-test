@@ -11,6 +11,8 @@
 	import { canvasToTexture } from '$lib/renderer/texture-utils';
 	import type { SceneContext, RendererConfig } from '$lib/renderer/types';
 	import type { ViewingMode } from '$lib/modes/types';
+	import { startVideoExport, type VideoExportHandle } from '$lib/export/video-exporter';
+	import { exportGLTF } from '$lib/export/gltf-exporter';
 	import * as THREE from 'three';
 
 	let containerEl: HTMLDivElement;
@@ -25,8 +27,9 @@
 			displacementScale: appState.displacementScale,
 			parallaxMaxOffset: appState.parallaxMaxOffset,
 			parallaxSmoothing: appState.parallaxSmoothing,
-			parallaxAutoWiggle: appState.parallaxAutoWiggle,
-			parallaxAutoWiggleSpeed: appState.parallaxAutoWiggleSpeed,
+			parallaxAutoAnimate: appState.parallaxAutoAnimate,
+			parallaxAnimationSpeed: appState.parallaxAnimationSpeed,
+			parallaxAnimationType: appState.parallaxAnimationType,
 			stereoCrossEye: appState.stereoCrossEye,
 			stereoEyeSeparation: appState.stereoEyeSeparation,
 			webxrViewingDistance: appState.webxrViewingDistance,
@@ -111,6 +114,42 @@
 		} else {
 			containerEl.requestFullscreen().catch(() => {});
 		}
+	}
+
+	export function recordVideo(
+		durationMs: number,
+		callbacks: { onProgress?: (p: number) => void; onComplete?: (blob: Blob) => void; onStop?: () => void }
+	): VideoExportHandle | null {
+		if (!sceneCtx) return null;
+
+		// Force auto-animate on during recording
+		const wasAutoAnimate = appState.parallaxAutoAnimate;
+		if (!wasAutoAnimate) {
+			appState.parallaxAutoAnimate = true;
+			activeMode?.updateConfig('autoAnimate', true);
+		}
+
+		const handle = startVideoExport({
+			canvas: sceneCtx.canvas,
+			durationMs,
+			onProgress: callbacks.onProgress,
+			onComplete: (blob) => {
+				// Restore auto-animate state
+				if (!wasAutoAnimate) {
+					appState.parallaxAutoAnimate = false;
+					activeMode?.updateConfig('autoAnimate', false);
+				}
+				callbacks.onComplete?.(blob);
+				callbacks.onStop?.();
+			}
+		});
+
+		return handle;
+	}
+
+	export async function handleExportGLTF(): Promise<void> {
+		if (!sceneCtx) return;
+		await exportGLTF(sceneCtx);
 	}
 
 	function extractProcessedDepth(): { data: Float32Array; width: number; height: number } | null {
